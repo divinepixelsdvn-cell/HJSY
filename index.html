@@ -10,6 +10,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getDatabase, ref, push, onValue, remove, set, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  import { getStorage, ref as sref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
   // ========== FIREBASE CONFIG ==========
   // TODO: Replace with your Firebase project config after creating project
@@ -25,6 +26,7 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
+  const storage = getStorage(app);
   window._db = db;
   window._ref = ref;
   window._push = push;
@@ -34,21 +36,54 @@
   window._firebaseReady = true;
   window._runTransaction = runTransaction;
 
+  // ====== FIREBASE STORAGE UPLOAD ======
+  window._fbUploadFile = function(file, path, onProgress, onDone, onError) {
+    const storageRef = sref(storage, path);
+    const task = uploadBytesResumable(storageRef, file);
+    task.on('state_changed',
+      snap => { const pct = Math.round(snap.bytesTransferred / snap.totalBytes * 100); if(onProgress) onProgress(pct); },
+      err => { if(onError) onError(err); },
+      () => { getDownloadURL(task.snapshot.ref).then(url => { if(onDone) onDone(url); }); }
+    );
+  };
+
   // ====== REAL-TIME LISTENERS ======
+  // Firebase నుండి real-time updates వచ్చినప్పుడు అందరి screen లో update అవుతుంది
   function listenFeed(type) {
     onValue(ref(db, 'posts/' + type), (snap) => {
-      const d = getSaved();
       const fireItems = [];
       snap.forEach(child => {
         fireItems.push({ ...child.val(), _fbKey: child.key });
       });
-      // Merge firebase posts with default posts (defaults last)
-      const defaults = type === 'photos' ? DEFAULT_PHOTOS :
-                       type === 'posts'  ? [...DEFAULT_PHOTOS, ...DEFAULT_POSTS] : [];
-      const defaultIds = defaults.map(x => x.id);
-      const fbOnly = fireItems.filter(x => !defaultIds.includes(x.id));
-      d[type] = [...fbOnly.reverse(), ...defaults];
-      renderFeed(type);
+      const DEF_PHOTOS = window.DEFAULT_PHOTOS || [];
+      const DEF_POSTS  = window.DEFAULT_POSTS  || [];
+      const NEWS_DEFAULTS = [
+        {id:'def1',title:'🚩 హనుమాన్ సోభాయాత్ర సన్నాహాలు ముమ్మరం',body:'పెద్దాపురం మరియు సామర్లకోట నగరాల్లో మే 12 నాడు జరగనున్న హనుమాన్ సోభాయాత్రకు భారీగా ప్రజలు సన్నాహాలు చేసుకుంటున్నారు.',date:'18/04/2026'},
+        {id:'def2',title:'🏍️ బైక్ ర్యాలీ రూట్ ప్రకటన',body:'సోభాయాత్ర రూట్ ప్రకటించబడింది. ర్యాలీ ఉదయం 6 గంటలకు ప్రారంభమవుతుంది.',date:'15/04/2026'}
+      ];
+      const defaults = type === 'photos' ? DEF_PHOTOS :
+                       type === 'posts'  ? [...DEF_PHOTOS, ...DEF_POSTS] :
+                       type === 'news'   ? NEWS_DEFAULTS : [];
+      const defaultIds = defaults.map(x => String(x.id));
+      const fbOnly = fireItems.filter(x => !defaultIds.includes(String(x.id)));
+      fbOnly.sort((a,b) => Number(b.id) - Number(a.id));
+      const merged = [...fbOnly, ...defaults];
+
+      // localStorage లో save చేయి
+      try {
+        const raw = localStorage.getItem('hjsy26_data');
+        const d = raw ? JSON.parse(raw) : {};
+        d[type] = merged;
+        d._defaults = true;
+        localStorage.setItem('hjsy26_data', JSON.stringify(d));
+      } catch(e) {}
+
+      // Screen లో render చేయి
+      if(type === 'news') {
+        if(typeof renderNewsList === 'function') renderNewsList();
+      } else {
+        if(typeof renderFeed === 'function') renderFeed(type);
+      }
     });
   }
 
@@ -58,23 +93,6 @@
       listenFeed('photos');
       listenFeed('videos');
       listenFeed('news');
-      // News real-time listener
-      onValue(ref(db, 'posts/news'), (snap) => {
-        const d = getSaved();
-        const fireItems = [];
-        snap.forEach(child => {
-          fireItems.push({ ...child.val(), _fbKey: child.key });
-        });
-        const defNews = [
-          {id:'def1',title:'🚩 హనుమాన్ సోభాయాత్ర సన్నాహాలు ముమ్మరం',body:'పెద్దాపురం మరియు సామర్లకోట నగరాల్లో మే 12 నాడు జరగనున్న హనుమాన్ సోభాయాత్రకు భారీగా ప్రజలు సన్నాహాలు చేసుకుంటున్నారు.',date:'18/04/2026'},
-          {id:'def2',title:'🏍️ బైక్ ర్యాలీ రూట్ ప్రకటన',body:'సోభాయాత్ర రూట్ ప్రకటించబడింది. ర్యాలీ ఉదయం 6 గంటలకు ప్రారంభమవుతుంది.',date:'15/04/2026'}
-        ];
-        const defIds = defNews.map(x => x.id);
-        const fbOnly = fireItems.filter(x => !defIds.includes(String(x.id)));
-        d.news = [...fbOnly.reverse(), ...defNews];
-        setSaved(d);
-        renderNewsList();
-      });
     }, 500);
   });
 
@@ -458,7 +476,7 @@ nav{position:sticky;top:0;z-index:100;background:rgba(13,2,0,.96);border-bottom:
     </div>
     <input type="file" id="file-input" onchange="fileChosen(this)">
     <textarea id="up-caption" class="post-caption" rows="2" placeholder="కాప్షన్ రాయండి..."></textarea>
-    <button class="submit-btn" onclick="uploadPost()" style="margin-top:8px">🚀 పోస్ట్ చేయి</button>
+    <button class="submit-btn" id="up-submit-btn" onclick="uploadPost()" style="margin-top:8px">🚀 పోస్ట్ చేయి</button>
     <br><br>
     <button class="modal-close" onclick="hideModal('upload-modal')">రద్దు</button>
   </div>
@@ -613,6 +631,7 @@ function doLogin(){
     hideModal('login-modal');
     updateProfileUI();
     renderUploadAreas();
+    renderAll();
     showToast('✅ విజయవంతంగా లాగిన్ అయ్యారు!');
     document.getElementById('login-id').value='';
     document.getElementById('login-pw').value='';
@@ -626,6 +645,7 @@ function doLogout(){
   isLoggedIn=false;
   updateProfileUI();
   renderUploadAreas();
+  renderAll();
   showToast('👋 లాగ్ అవుట్ అయ్యారు');
   document.getElementById('profile-dropdown').style.display='none';
   profileOpen=false;
@@ -773,20 +793,47 @@ function uploadPost(){
   const caption=document.getElementById('up-caption').value.trim();
   if(upMediaType!=='text'&&!selFile){showToast('⚠️ ఫైల్ సెలెక్ట్ చేయండి!');return;}
   if(upMediaType==='text'&&!caption){showToast('⚠️ టెక్స్ట్ రాయండి!');return;}
+
+  // TEXT POST
   if(upMediaType==='text'){
-    const d=getSaved();const post={id:Date.now(),type:'text',caption,author:'HJSY26',time:new Date().toLocaleDateString('te-IN')};
-    if(!d[upType])d[upType]=[];d[upType].unshift(post);setSaved(d);renderFeed(upType);
+    const post={id:Date.now(),type:'text',caption,author:'HJSY26',time:new Date().toLocaleDateString('te-IN'),likes:0};
     if(window._fbPushPost) window._fbPushPost(upType, post);
-    hideModal('upload-modal');showToast('✅ పోస్ట్ చేయబడింది!');return;
+    const d=getSaved();if(!d[upType])d[upType]=[];d[upType].unshift(post);setSaved(d);renderFeed(upType);
+    hideModal('upload-modal');showToast('✅ పోస్ట్ చేయబడింది! అందరికీ కనిపిస్తుంది 🎉');return;
   }
-  const reader=new FileReader();
-  reader.onload=function(e){
-    const d=getSaved();
-    const post={id:Date.now(),type:upMediaType,data:e.target.result,caption,author:'HJSY26',time:new Date().toLocaleDateString('te-IN'),fileName:selFile.name,likes:0};
-    if(!d[upType])d[upType]=[];d[upType].unshift(post);setSaved(d);renderFeed(upType);
-    if(window._fbPushPost) window._fbPushPost(upType, post);
-    hideModal('upload-modal');showToast('✅ పోస్ట్ చేయబడింది!');
-  };reader.readAsDataURL(selFile);
+
+  // PHOTO / VIDEO — Firebase Storage కి upload చేసి URL తీసుకో
+  if(window._fbUploadFile && window._firebaseReady){
+    const ext=selFile.name.split('.').pop();
+    const path='uploads/'+upType+'/'+Date.now()+'_'+Math.random().toString(36).slice(2)+'.'+ext;
+    const upBtn=document.getElementById('up-submit-btn');
+    if(upBtn){upBtn.disabled=true;upBtn.textContent='⏳ అప్లోడ్ అవుతోంది...';}
+    showToast('⏳ అప్లోడ్ అవుతోంది...');
+    window._fbUploadFile(selFile,path,
+      (pct)=>{ if(upBtn)upBtn.textContent='⏳ '+pct+'% అప్లోడ్...'; showToast('⏳ '+pct+'% అప్లోడ్ అవుతోంది...'); },
+      (url)=>{
+        const post={id:Date.now(),type:upMediaType,url,caption,author:'HJSY26',time:new Date().toLocaleDateString('te-IN'),fileName:selFile.name,likes:0};
+        if(window._fbPushPost) window._fbPushPost(upType, post);
+        const d=getSaved();if(!d[upType])d[upType]=[];d[upType].unshift(post);setSaved(d);renderFeed(upType);
+        if(upBtn){upBtn.disabled=false;upBtn.textContent='✅ పోస్ట్ చేయి';}
+        hideModal('upload-modal');showToast('✅ పోస్ట్ చేయబడింది! అందరికీ కనిపిస్తుంది 🎉');
+      },
+      (err)=>{
+        console.error('Storage error:',err);
+        if(upBtn){upBtn.disabled=false;upBtn.textContent='✅ పోస్ట్ చేయి';}
+        showToast('⚠️ అప్లోడ్ లో తప్పు జరిగింది, మళ్ళీ try చేయండి');
+      }
+    );
+  } else {
+    // Firebase లేకుంటే base64 fallback
+    const reader=new FileReader();
+    reader.onload=function(e){
+      const d=getSaved();
+      const post={id:Date.now(),type:upMediaType,data:e.target.result,caption,author:'HJSY26',time:new Date().toLocaleDateString('te-IN'),fileName:selFile.name,likes:0};
+      if(!d[upType])d[upType]=[];d[upType].unshift(post);setSaved(d);renderFeed(upType);
+      hideModal('upload-modal');showToast('✅ పోస్ట్ చేయబడింది!');
+    };reader.readAsDataURL(selFile);
+  }
 }
 
 // ====== RENDER FEEDS ======
