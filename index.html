@@ -55,20 +55,7 @@ const firebaseConfig = {
       snap.forEach(child => {
         fireItems.push({ ...child.val(), _fbKey: child.key });
       });
-      const DEF_PHOTOS = window.DEFAULT_PHOTOS || [];
-      const DEF_POSTS  = window.DEFAULT_POSTS  || [];
-      const NEWS_DEFAULTS = [
-        {id:'def1',title:'🚩 హనుమాన్ సోభాయాత్ర సన్నాహాలు ముమ్మరం',body:'పెద్దాపురం మరియు సామర్లకోట నగరాల్లో మే 12 నాడు జరగనున్న హనుమాన్ సోభాయాత్రకు భారీగా ప్రజలు సన్నాహాలు చేసుకుంటున్నారు.',date:'18/04/2026'},
-        {id:'def2',title:'🏍️ బైక్ ర్యాలీ రూట్ ప్రకటన',body:'సోభాయాత్ర రూట్ ప్రకటించబడింది. ర్యాలీ ఉదయం 6 గంటలకు ప్రారంభమవుతుంది.',date:'15/04/2026'}
-      ];
-      const defaults = type === 'photos' ? DEF_PHOTOS :
-                       type === 'posts'  ? [...DEF_PHOTOS, ...DEF_POSTS] :
-                       type === 'news'   ? NEWS_DEFAULTS : [];
-      const defaultIds = defaults.map(x => String(x.id));
-      const fbOnly = fireItems.filter(x => !defaultIds.includes(String(x.id)));
-      fbOnly.sort((a,b) => Number(b.id) - Number(a.id));
-      const merged = [...fbOnly, ...defaults];
-
+     
       // localStorage లో save చేయి
       try {
         const raw = localStorage.getItem('hjsy26_data');
