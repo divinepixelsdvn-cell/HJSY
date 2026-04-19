@@ -869,7 +869,7 @@ function renderFeed(type){
       <button class="post-btn" onclick="likePost('${p.id}','${type}',this)">❤️ జై శ్రీరామ్ <span class="like-count">${likeCount>0?'('+likeCount+')':''}</span></button>
       ${canDownload?`<button class="post-btn" onclick="downloadPost('${p.id}','${type}')">⬇️ డౌన్లోడ్</button>`:''}
       <button class="post-btn" onclick="sharePost()">🔗 షేర్</button>
-      ${isLoggedIn?`<button class="post-btn" onclick="delPost('${p.id}','${type}')" style="color:#FF6060">🗑️</button>`:''}
+      <button class="post-btn" onclick="delPost('${p.id}','${type}')" style="color:#FF6060">🗑️</button>
     </div>`;
     el.appendChild(card);
   });
