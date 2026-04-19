@@ -9,19 +9,20 @@
 <!-- Firebase -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getDatabase, ref, push, onValue, remove, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  import { getDatabase, ref, push, onValue, remove, set, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
   // ========== FIREBASE CONFIG ==========
   // TODO: Replace with your Firebase project config after creating project
-const firebaseConfig = {
-  apiKey: "AIzaSyDRZqyKswlplTyZ4g4gYked_LyqAbAJdwk",
-  authDomain: "hjsy-f081e.firebaseapp.com",
-  projectId: "hjsy-f081e",
-  storageBucket: "hjsy-f081e.firebasestorage.app",
-  messagingSenderId: "610933104675",
-  appId: "1:610933104675:web:2c926cab73f1ab66195196",
-  measurementId: "G-X531DWXKM9"
-};
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+    projectId: "YOUR_PROJECT",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
   window._db = db;
@@ -31,6 +32,7 @@ const firebaseConfig = {
   window._remove = remove;
   window._set = set;
   window._firebaseReady = true;
+  window._runTransaction = runTransaction;
 
   // ====== REAL-TIME LISTENERS ======
   function listenFeed(type) {
@@ -262,8 +264,9 @@ nav{position:sticky;top:0;z-index:100;background:rgba(13,2,0,.96);border-bottom:
   <div class="top-band">🪔 జై శ్రీ రామ్ 🪔 జై హనుమాన్ 🪔</div>
 
   <div class="cover-content">
+    <div class="main-heading" style="font-size:clamp(1.6rem,6vw,3rem);margin-bottom:8px;margin-top:10px;">హనుమాన్ శోభాయాత్ర</div>
+    <div style="font-family:'Cinzel Decorative',cursive;font-size:clamp(1.3rem,5vw,2.4rem);color:#FF6B00;text-shadow:0 0 20px rgba(255,107,0,.8),2px 2px 0 #8B0000;margin-bottom:14px;letter-spacing:4px;">— 2026 —</div>
     <div class="badge">🚩 హనుమాన్ జయంతి 2026 🚩</div>
-    <div class="main-heading">హనుమాన్ శోభాయాత్ర - 2026</div>
     <div class="cities">పెద్దాపురం ❈ సామర్లకోట</div>
     <div class="date-tag">📅 మే 12, 2026 | మంగళవారం</div>
 
@@ -293,21 +296,8 @@ nav{position:sticky;top:0;z-index:100;background:rgba(13,2,0,.96);border-bottom:
 <!-- ===== NAVIGATION ===== -->
 <nav>
   <div class="nav-inner">
-    <a class="nav-logo" onclick="goToCover()">🚩 సోభాయాత్ర ౨౦౨౬</a>
-    <div class="nav-tabs">
-      <button class="nav-tab active" id="tab-posts" onclick="showSection('posts',this)">
-        <span class="nav-icon">📝</span><span class="nav-label">పోస్ట్లు</span>
-      </button>
-      <button class="nav-tab" id="tab-photos" onclick="showSection('photos',this)">
-        <span class="nav-icon">📸</span><span class="nav-label">ఫోటోస్</span>
-      </button>
-      <button class="nav-tab" id="tab-videos" onclick="showSection('videos',this)">
-        <span class="nav-icon">🎬</span><span class="nav-label">వీడియోస్</span>
-      </button>
-      <button class="nav-tab" id="tab-news" onclick="showSection('news',this)">
-        <span class="nav-icon">📰</span><span class="nav-label">న్యూస్</span>
-      </button>
-    </div>
+
+
     <div class="nav-right">
       <div id="nav-profile" style="position:relative">
         <div class="profile-icon" onclick="toggleProfileMenu()" title="ప్రొఫైల్">👤</div>
@@ -323,6 +313,13 @@ nav{position:sticky;top:0;z-index:100;background:rgba(13,2,0,.96);border-bottom:
 <!-- ===== MAIN APP ===== -->
 <div id="main-app">
   <div class="app-section" style="max-width:640px;margin:0 auto;padding:16px;">
+
+    <!-- PAGE TITLE BANNER -->
+    <div style="text-align:center;padding:18px 10px 14px;margin-bottom:16px;background:linear-gradient(135deg,rgba(255,107,0,.1),rgba(139,0,0,.15));border-radius:16px;border:1px solid rgba(255,215,0,.2);">
+      <div style="font-family:'Cinzel Decorative',cursive;font-size:clamp(1.2rem,5vw,2rem);color:#FFD700;text-shadow:0 0 20px rgba(255,215,0,.7),2px 2px 0 #8B0000;margin-bottom:4px;">హనుమాన్ శోభాయాత్ర</div>
+      <div style="font-family:'Cinzel Decorative',cursive;font-size:clamp(1rem,4vw,1.5rem);color:#FF6B00;text-shadow:0 0 15px rgba(255,107,0,.7);letter-spacing:3px;">— 2026 —</div>
+      <div style="font-size:.8rem;color:#FFA040;margin-top:6px;letter-spacing:2px;">🚩 పెద్దాపురం ❈ సామర్లకోట | మే 12 🚩</div>
+    </div>
 
     <!-- నమోదు COLLAPSIBLE -->
     <div id="reg-panel" style="margin-bottom:20px;border:1px solid rgba(255,215,0,.25);border-radius:16px;overflow:hidden;">
@@ -644,6 +641,17 @@ function renderUploadAreas(){
 }
 
 // ====== REGISTRATION ======
+// Google Form URL & Entry IDs — మీ form తో replace చేయండి
+const GFORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSdd4FnCGV-fKURhV4MMsuSuf_5BZunGgrqOEV3GCJxTigUOLA/formResponse';
+const GFORM_ENTRIES = {
+  name:    'entry.761476775',
+  phone:   'entry.1082990813',
+  village: 'entry.1898069040',
+  mandal:  'entry.1475099524',
+  bike:    'entry.1723285584',
+  regId:   'entry.1234567890'  // Google Form లో "నమోదు ID" field add చేసి దాని entry ID పెట్టండి
+};
+
 function submitReg(){
   const name=document.getElementById('reg-name').value.trim();
   const phone=document.getElementById('reg-phone').value.trim();
@@ -651,24 +659,62 @@ function submitReg(){
   const mandal=document.getElementById('reg-mandal').value.trim();
   const bike=document.getElementById('reg-bike').checked;
   if(!name||!phone||!village||!mandal){showToast('⚠️ అన్ని వివరాలు నమోదు చేయండి!');return;}
-  // Submit to Google Form silently
-  const fp=new URLSearchParams();
-  fp.append('entry.761476775',name);fp.append('entry.1082990813',phone);
-  fp.append('entry.1898069040',village);fp.append('entry.1475099524',mandal);
-  fp.append('entry.1723285584',bike?'ఉంది':'లేదు');
-  fetch('https://docs.google.com/forms/d/e/1FAIpQLSdd4FnCGV-fKURhV4MMsuSuf_5BZunGgrqOEV3GCJxTigUOLA/formResponse?'+fp.toString(),{method:'POST',mode:'no-cors'}).catch(()=>{});
-  const regId='HSY-'+String(Date.now()).slice(-6);
-  document.getElementById('c-name').textContent=name;
-  document.getElementById('c-phone').textContent=phone;
-  document.getElementById('c-village').textContent=village;
-  document.getElementById('c-mandal').textContent=mandal;
-  document.getElementById('c-bike').textContent=bike?'🏍️ బైక్: ఉంది':'';
-  document.getElementById('c-id').textContent='ID: '+regId;
-  showModal('id-card-modal');
-  showToast('🎉 నమోదు విజయవంతం!');
-  document.getElementById('reg-name').value='';document.getElementById('reg-phone').value='';
-  document.getElementById('reg-village').value='';document.getElementById('reg-mandal').value='';
-  document.getElementById('reg-bike').checked=false;
+
+  const btn=document.querySelector('.submit-btn');
+  btn.disabled=true; btn.textContent='⏳ నమోదు అవుతోంది...';
+
+  // Firebase counter తో sequential ID తీసుకోండి
+  function doRegister(regId){
+    const idStr='HJSY-'+String(regId).padStart(3,'0');
+
+    // Google Form కి silent submit
+    const fp=new URLSearchParams();
+    fp.append(GFORM_ENTRIES.name, name);
+    fp.append(GFORM_ENTRIES.phone, phone);
+    fp.append(GFORM_ENTRIES.village, village);
+    fp.append(GFORM_ENTRIES.mandal, mandal);
+    fp.append(GFORM_ENTRIES.bike, bike?'ఉంది':'లేదు');
+    fp.append(GFORM_ENTRIES.regId, idStr);
+    fetch(GFORM_URL+'?'+fp.toString(),{method:'POST',mode:'no-cors'}).catch(()=>{});
+
+    // ID card చూపించు
+    document.getElementById('c-name').textContent=name;
+    document.getElementById('c-phone').textContent=phone;
+    document.getElementById('c-village').textContent=village;
+    document.getElementById('c-mandal').textContent=mandal;
+    document.getElementById('c-bike').textContent=bike?'🏍️ బైక్: ఉంది':'';
+    document.getElementById('c-id').textContent='ID: '+idStr;
+    showModal('id-card-modal');
+    showToast('🎉 నమోదు విజయవంతం! మీ ID: '+idStr);
+
+    document.getElementById('reg-name').value='';
+    document.getElementById('reg-phone').value='';
+    document.getElementById('reg-village').value='';
+    document.getElementById('reg-mandal').value='';
+    document.getElementById('reg-bike').checked=false;
+    btn.disabled=false; btn.textContent='🚩 నమోదు చేసుకోండి - ID కార్డు పొందండి';
+  }
+
+  // Firebase ready అయితే counter use చేయి, లేకుంటే timestamp use చేయి
+  if(window._firebaseReady && window._db && window._ref && window._set){
+    const counterRef = window._ref(window._db, 'regCounter');
+    // Transaction లేకుండా safe increment — onValue తో current value తీసుకో
+    window._runTransaction(counterRef, (current)=>{
+      return (current||0)+1;
+    }).then(result=>{
+      doRegister(result.snapshot.val());
+    }).catch(()=>{
+      const localCount=(parseInt(localStorage.getItem('hjsy_regCount')||'0'))+1;
+      localStorage.setItem('hjsy_regCount',localCount);
+      doRegister(localCount);
+      btn.disabled=false;
+    });
+  } else {
+    // Firebase లేకుంటే local counter
+    const localCount = (parseInt(localStorage.getItem('hjsy_regCount')||'0'))+1;
+    localStorage.setItem('hjsy_regCount', localCount);
+    doRegister(localCount);
+  }
 }
 function downloadID(){
   const card=document.getElementById('id-card-content');
@@ -696,6 +742,7 @@ function fileChosen(input){
   if(input.files&&input.files[0]){selFile=input.files[0];document.getElementById('up-filename').textContent='✅ '+selFile.name;}
 }
 function uploadPost(){
+  if(!isLoggedIn){showToast('🔒 పోస్ట్ చేయడానికి లాగిన్ అవ్వండి!');hideModal('upload-modal');showModal('login-modal');return;}
   const caption=document.getElementById('up-caption').value.trim();
   if(upMediaType!=='text'&&!selFile){showToast('⚠️ ఫైల్ సెలెక్ట్ చేయండి!');return;}
   if(upMediaType==='text'&&!caption){showToast('⚠️ టెక్స్ట్ రాయండి!');return;}
@@ -792,6 +839,8 @@ function sharePost(){
   else{navigator.clipboard.writeText(window.location.href).then(()=>showToast('🔗 లింక్ కాపీ అయింది!')).catch(()=>showToast('🔗 '+window.location.href));}
 }
 function delPost(id,type){
+  if(!isLoggedIn){showToast('🔒 Delete చేయడానికి లాగిన్ అవ్వండి!');return;}
+  if(!confirm('ఈ పోస్ట్ తొలగించాలా?'))return;
   const d=getSaved();
   const item=(d[type]||[]).find(x=>String(x.id)===String(id));
   if(item&&item._fbKey&&window._fbDeletePost) window._fbDeletePost(type, item._fbKey);
@@ -800,6 +849,7 @@ function delPost(id,type){
 
 // ====== NEWS ======
 function postNews(){
+  if(!isLoggedIn){showToast('🔒 న్యూస్ పోస్ట్ చేయడానికి లాగిన్ అవ్వండి!');return;}
   const title=document.getElementById('news-title-in').value.trim();
   const body=document.getElementById('news-body-in').value.trim();
   if(!title||!body){showToast('⚠️ శీర్షిక మరియు వివరాలు రాయండి!');return;}
@@ -810,6 +860,8 @@ function postNews(){
   document.getElementById('news-title-in').value='';document.getElementById('news-body-in').value='';
 }
 function delNews(id){
+  if(!isLoggedIn){showToast('🔒 Delete చేయడానికి లాగిన్ అవ్వండి!');return;}
+  if(!confirm('ఈ న్యూస్ తొలగించాలా?'))return;
   const d=getSaved();d.news=(d.news||[]).filter(n=>String(n.id)!==String(id));setSaved(d);renderNewsList();showToast('🗑️ తొలగించబడింది');
 }
 function renderNewsList(){
