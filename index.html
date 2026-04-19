@@ -58,6 +58,23 @@
       listenFeed('photos');
       listenFeed('videos');
       listenFeed('news');
+      // News real-time listener
+      onValue(ref(db, 'posts/news'), (snap) => {
+        const d = getSaved();
+        const fireItems = [];
+        snap.forEach(child => {
+          fireItems.push({ ...child.val(), _fbKey: child.key });
+        });
+        const defNews = [
+          {id:'def1',title:'🚩 హనుమాన్ సోభాయాత్ర సన్నాహాలు ముమ్మరం',body:'పెద్దాపురం మరియు సామర్లకోట నగరాల్లో మే 12 నాడు జరగనున్న హనుమాన్ సోభాయాత్రకు భారీగా ప్రజలు సన్నాహాలు చేసుకుంటున్నారు.',date:'18/04/2026'},
+          {id:'def2',title:'🏍️ బైక్ ర్యాలీ రూట్ ప్రకటన',body:'సోభాయాత్ర రూట్ ప్రకటించబడింది. ర్యాలీ ఉదయం 6 గంటలకు ప్రారంభమవుతుంది.',date:'15/04/2026'}
+        ];
+        const defIds = defNews.map(x => x.id);
+        const fbOnly = fireItems.filter(x => !defIds.includes(String(x.id)));
+        d.news = [...fbOnly.reverse(), ...defNews];
+        setSaved(d);
+        renderNewsList();
+      });
     }, 500);
   });
 
@@ -686,6 +703,16 @@ function submitReg(){
     document.getElementById('c-id').textContent='ID: '+idStr;
     showModal('id-card-modal');
     showToast('🎉 నమోదు విజయవంతం! మీ ID: '+idStr);
+    // Auto-download ID card after short delay
+    setTimeout(()=>{
+      const card=document.getElementById('id-card-content');
+      if(typeof html2canvas!=='undefined'){
+        html2canvas(card,{backgroundColor:'#1a0300',scale:2,useCORS:true,allowTaint:true}).then(canvas=>{
+          const a=document.createElement('a');a.download='HJSY-ID-'+idStr+'.png';a.href=canvas.toDataURL();a.click();
+          showToast('⬇️ ID కార్డు స్వయంగా డౌన్‌లోడ్ అవుతోంది!');
+        }).catch(()=>{});
+      }
+    }, 800);
 
     document.getElementById('reg-name').value='';
     document.getElementById('reg-phone').value='';
@@ -856,13 +883,17 @@ function postNews(){
   const d=getSaved();
   const n={id:Date.now(),title,body,date:new Date().toLocaleDateString('te-IN'),author:'HJSY26'};
   if(!d.news)d.news=[];d.news.unshift(n);setSaved(d);renderNewsList();
+  if(window._fbPushPost) window._fbPushPost('news', n);
   hideModal('news-modal');showToast('✅ న్యూస్ పోస్ట్ అయింది!');
   document.getElementById('news-title-in').value='';document.getElementById('news-body-in').value='';
 }
 function delNews(id){
   if(!isLoggedIn){showToast('🔒 Delete చేయడానికి లాగిన్ అవ్వండి!');return;}
   if(!confirm('ఈ న్యూస్ తొలగించాలా?'))return;
-  const d=getSaved();d.news=(d.news||[]).filter(n=>String(n.id)!==String(id));setSaved(d);renderNewsList();showToast('🗑️ తొలగించబడింది');
+  const d=getSaved();
+  const item=(d.news||[]).find(n=>String(n.id)===String(id));
+  if(item&&item._fbKey&&window._fbDeletePost) window._fbDeletePost('news', item._fbKey);
+  d.news=(d.news||[]).filter(n=>String(n.id)!==String(id));setSaved(d);renderNewsList();showToast('🗑️ తొలగించబడింది');
 }
 function renderNewsList(){
   const el=document.getElementById('news-list');if(!el)return;
@@ -871,12 +902,16 @@ function renderNewsList(){
     {id:'def1',title:'🚩 హనుమాన్ సోభాయాత్ర సన్నాహాలు ముమ్మరం',body:'పెద్దాపురం మరియు సామర్లకోట నగరాల్లో మే 12 నాడు జరగనున్న హనుమాన్ సోభాయాత్రకు భారీగా ప్రజలు సన్నాహాలు చేసుకుంటున్నారు. ఈ ర్యాలీలో వేలాది మంది పాల్గొంటారని నిర్వాహకులు తెలిపారు.',date:'18/04/2026'},
     {id:'def2',title:'🏍️ బైక్ ర్యాలీ రూట్ ప్రకటన',body:'సోభాయాత్ర రూట్ ప్రకటించబడింది. ర్యాలీ ఉదయం 6 గంటలకు ప్రారంభమవుతుంది. పాల్గొనాలనుకునే వారు ముందుగా నమోదు చేసుకోవాలి.',date:'15/04/2026'}
   ];
-  const all=[...userNews,...defNews];
+  // Merge: firebase/user news first, then defaults (but don't duplicate)
+  const allIds = userNews.map(n=>String(n.id));
+  const filteredDef = defNews.filter(n=>!allIds.includes(String(n.id)));
+  const all=[...userNews,...filteredDef];
   el.innerHTML=all.map(n=>`<div class="news-card">
     <div class="news-date">📅 ${n.date||''}</div>
     <div class="news-title">${n.title}</div>
     <div class="news-body">${n.body}</div>
-    ${n.author?`<div style="margin-top:6px;font-size:.72rem;color:#FF6B00">👤 ${n.author}${isLoggedIn?` <button onclick="delNews('${n.id}')" style="background:none;border:none;color:#FF6060;cursor:pointer;font-size:.75rem;margin-left:6px">🗑️</button>`:''}</div>`:''}
+    <div style="margin-top:6px;font-size:.72rem;color:#FF6B00">${n.author?`👤 ${n.author}`:''}${isLoggedIn?` <button onclick="delNews('${n.id}')" style="background:none;border:none;color:#FF6060;cursor:pointer;font-size:.75rem;margin-left:6px">🗑️ తొలగించు</button>`:''}
+    </div>
   </div>`).join('');
 }
 
